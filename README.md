@@ -1,6 +1,8 @@
 # d3js-chart
 A Simple Chart with d3js
 
+
+![chart](d3js-chart.png)
 ## start webserver via docker
 ```shell
 docker run -d \
@@ -17,3 +19,4 @@ docker run -d \
     -p 80:80 \
     nginx:alpine
 ```
+
