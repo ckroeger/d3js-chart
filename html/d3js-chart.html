@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+
+        
+            .line {
+                fill: none;
+                stroke: steelblue;
+                stroke-width: 1.5px;
+            }
+            .overlay {
+        fill: none;
+        pointer-events: all;
+    }
+
+    .focus circle {
+        fill: steelblue;
+    }
+
+    .focus text {
+        font-size: 14px;
+    }
+
+    .tooltip {
+        fill: white;
+        stroke: #000;
+    }
+
+    .tooltip-date, .tooltip-likes {
+        font-weight: bold;
+    }
+            </style>
+        </head>
+<body>
+    <svg width="960" height="500">dd</svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+   //initialize margin start
+   var margin = { top: 30, right: 120, bottom: 30, left: 50 },
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom,
+        tooltip = { width: 100, height: 100, x: 10, y: -30 };
+    //initialize margin end
+    var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var parseDate = d3.timeParse("%m/%d/%Y");
+
+    var dateFormatter = d3.timeFormat("%d/%m/%Y");
+
+    var x = d3.scaleTime()
+            .range([0, width]);
+
+    var y = d3.scaleLinear()
+            .range([height, 0]);
+
+    var xAxis = d3.axisBottom()
+        .scale(x)
+        .tickFormat(dateFormatter);
+
+    var yAxis = d3.axisLeft()
+        .scale(y)
+        .tickFormat(d3.format("$.2f"));
+
+    var line = d3.line()
+        .x(function(d) { return x(d.date); })
+        .y(function(d) { return y(d.close); });
+
+    var bisectDate = d3.bisector(function(d) { return d.date; }).left;
+    var formatValue = d3.format("$.2f");
+
+    d3.csv("/data/apple-6-months-data.csv", function(error, data) {
+        if (error) throw error;
+        data.forEach(function(d) {
+            d.date = parseDate(d.date);
+        });
+        data.forEach(function(d) {
+            d.close = Number(d.close.replace(/[^0-9.-]+/g,""));
+        });
+
+        data.sort(function(a, b) {
+            return a.date - b.date;
+        });
+        x.domain([data[0].date, data[data.length - 1].date]);
+        y.domain(d3.extent(data, function(d) { return d.close; }));
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".71em")
+            .style("text-anchor", "end")
+            .text("Number of Likes");
+        
+        svg.append("path")
+            .datum(data)
+            .attr("class", "line")
+            .attr("d", line);
+
+        var focus = svg.append("g")
+            .attr("class", "focus")
+            .style("display", "none");
+
+        focus.append("circle")
+            .attr("r", 5);
+
+        focus.append("rect")
+            .attr("class", "tooltip")
+            .attr("width", 100)
+            .attr("height", 50)
+            .attr("x", 10)
+            .attr("y", -22)
+            .attr("rx", 4)
+            .attr("ry", 4);
+
+        focus.append("text")
+            .attr("class", "tooltip-date")
+            .attr("x", 18)
+            .attr("y", -2);
+
+        focus.append("text")
+            .attr("x", 18)
+            .attr("y", 18)
+            .text("Price:");
+
+        focus.append("text")
+            .attr("class", "tooltip-likes")
+            .attr("x", 60)
+            .attr("y", 18);
+
+        svg.append("rect")
+            .attr("class", "overlay")
+            .attr("width", width)
+            .attr("height", height)
+            .on("mouseover", function() { focus.style("display", null); })
+            .on("mouseout", function() { focus.style("display", "none"); })
+            .on("mousemove", mousemove);
+
+        function mousemove() {
+            var x0 = x.invert(d3.mouse(this)[0]),
+                i = bisectDate(data, x0, 1),
+                d0 = data[i - 1],
+                d1 = data[i],
+                d = x0 - d0.date > d1.date - x0 ? d1 : d0;
+            focus.attr("transform", "translate(" + x(d.date) + "," + y(d.close) + ")");
+            focus.select(".tooltip-date").text(dateFormatter(d.date));
+            focus.select(".tooltip-likes").text(formatValue(d.close));
+        }
+    });
+</script>
+</body>
+</html>
